@@ -1,0 +1,35 @@
+{
+  "$schema": "./package.schema.json",
+  "name": "example-widget",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "A widget package, built and deployed by jive-abstract-widget.",
+  "type": "module",
+  "scripts": {
+    "jive:cicd:get-config": "jive-widget cicd get-config",
+    "jive:cicd:build": "jive-widget cicd build",
+    "jive:cicd:audit": "jive-widget cicd audit",
+    "jive:cicd:deploy:plan": "jive-widget cicd deploy-plan",
+    "jive:cicd:upload-artifacts": "jive-widget cicd upload-artifacts",
+    "jive:cicd:deploy": "jive-widget cicd deploy"
+  },
+  "devDependencies": {
+    "jive-abstract-widget": "0.1.0"
+  },
+  "jive": {
+    "cicd": {
+      "deploy": {
+        "verb": "Deploy to",
+        "branches": {
+          "main": [
+            "Production"
+          ]
+        },
+        "previews": false,
+        "sequentially": true
+      },
+      "runsOnPullRequests": true,
+      "runsOn": "ubuntu-latest"
+    }
+  }
+}

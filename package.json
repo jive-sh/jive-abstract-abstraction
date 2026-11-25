@@ -1,0 +1,64 @@
+{
+  "$schema": "./package.schema.json",
+  "license": "MIT",
+  "name": "jive-abstract-abstraction",
+  "description": "The Jive abstract that abstracts extend: its build is jive-abstract-library's plus the template step, which turns an abstract's src/template sample package into the .ejs template `jive create` renders. CLI: jive-abstraction.",
+  "version": "0.1.0",
+  "type": "module",
+  "peerDependencies": {
+    "effect": "^4.0.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "^4.1.4",
+    "@types/ejs": "^3.1.5",
+    "ejs": "^7.0.2",
+    "jive-abstract-library": "0.14.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "effect": "^4.1.4",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "jive:cicd:get-config": "bun src/entrypoints/jive-abstraction.ts cicd get-config",
+    "jive:cicd:build": "bun src/entrypoints/jive-abstraction.ts cicd build",
+    "jive:cicd:audit": "tsc --noEmit -p tsconfig.json && bun test src",
+    "jive:cicd:deploy:plan": "bun src/entrypoints/jive-abstraction.ts cicd deploy-plan",
+    "jive:cicd:upload-artifacts": "bun src/entrypoints/jive-abstraction.ts cicd upload-artifacts",
+    "jive:cicd:deploy": "bun src/entrypoints/jive-abstraction.ts cicd deploy",
+    "dev": "bun src/entrypoints/jive-abstraction.ts dev"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "jive": {
+    "cicd": {
+      "deploy": {
+        "verb": "Publish Tag",
+        "branches": {
+          "main": [
+            "latest"
+          ]
+        },
+        "previews": false,
+        "sequentially": true
+      },
+      "runsOnPullRequests": true,
+      "runsOn": "ubuntu-latest",
+      "requiredSecrets": [
+        "NPM_TOKEN"
+      ]
+    },
+    "library": {
+      "daemons": [],
+      "provisionWithJive": null
+    },
+    "abstract": {
+      "replacements": {
+        "widget": "kind"
+      }
+    }
+  }
+}

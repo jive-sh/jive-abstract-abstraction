@@ -1,0 +1,63 @@
+{
+  "$schema": "./package.schema.json",
+  "license": "MIT",
+  "name": "jive-abstract-widget",
+  "description": "A Jive abstract for widget packages: its CLI, jive-widget, implements the six CI/CD hooks every widget package's scripts point at.",
+  "version": "0.1.0",
+  "type": "module",
+  "peerDependencies": {
+    "effect": "^4.1.4",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "^4.1.4",
+    "jive-abstract-library": "0.14.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "effect": "^4.1.4",
+    "jive-abstract-abstraction": "0.1.0",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "jive:cicd:get-config": "jive-abstraction cicd get-config",
+    "jive:cicd:build": "jive-abstraction cicd build",
+    "jive:cicd:audit": "tsc --noEmit -p tsconfig.json && bun test src",
+    "jive:cicd:deploy:plan": "jive-abstraction cicd deploy-plan",
+    "jive:cicd:upload-artifacts": "jive-abstraction cicd upload-artifacts",
+    "jive:cicd:deploy": "jive-abstraction cicd deploy",
+    "dev": "jive-abstraction dev"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "jive": {
+    "cicd": {
+      "deploy": {
+        "verb": "Publish Tag",
+        "branches": {
+          "main": [
+            "latest"
+          ]
+        },
+        "previews": false,
+        "sequentially": true
+      },
+      "runsOnPullRequests": true,
+      "runsOn": "ubuntu-latest",
+      "requiredSecrets": [
+        "NPM_TOKEN"
+      ]
+    },
+    "library": {
+      "daemons": [],
+      "provisionWithJive": null
+    },
+    "abstract": {
+      "replacements": {
+        "example-widget": "packageName"
+      }
+    }
+  }
+}
