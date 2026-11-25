@@ -16,7 +16,9 @@ export const TEMPLATE_DIRECTORY = "template";
 /** Every file of the built template carries this suffix; `jive create` renders the file and drops it. */
 export const TEMPLATE_FILE_SUFFIX = ".ejs";
 
-const INPUT_NAME = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+/** An input name, unanchored: the template format matches it inside file and folder names. */
+export const INPUT_NAME_PATTERN = "[A-Za-z_$][A-Za-z0-9_$]*";
+const INPUT_NAME = new RegExp(`^${INPUT_NAME_PATTERN}$`);
 
 /** The name of one value `jive create` asks for: an EJS variable in the template, and the `--<name>` flag that gives it. */
 const InputName = Schema.String.check(Schema.isPattern(INPUT_NAME)).annotate({

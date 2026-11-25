@@ -37,7 +37,7 @@ test("writes the sample as .ejs files under dist/base/template, records the repl
   expect(Result.isSuccess(result) && result.success.fileCount).toBe(2);
 
   expect(readFileSync(join(rootDir, "dist/base/template/package.json.ejs"), "utf8")).toBe('{ "name": "<%= packageName %>" }\n');
-  expect(readFileSync(join(rootDir, "dist/base/template/src/entrypoints/jive-<%= kind %>.ts.ejs"), "utf8")).toBe('console.log("jive-<%= kind %>");\n');
+  expect(readFileSync(join(rootDir, "dist/base/template/src/entrypoints/jive-{kind}.ts.ejs"), "utf8")).toBe('console.log("jive-<%= kind %>");\n');
   expect(existsSync(join(rootDir, "dist/base/template/node_modules"))).toBe(false);
   expect(existsSync(join(rootDir, "dist/base/src/template"))).toBe(false);
   expect(existsSync(join(rootDir, "dist/base/dist/template"))).toBe(false);

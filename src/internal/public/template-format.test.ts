@@ -31,15 +31,31 @@ describe("encodeTemplate", () => {
     expect(files[0]?.contents).toBe("<%= packageName %>");
   });
 
-  test("replaces literals in file and folder names, each name on its own, and names every file .ejs", () => {
+  test("replaces literals in file and folder names with {input}, each name on its own, and names every file .ejs", () => {
     const { files } = encodeTemplate({
       files: [{ path: "src/entrypoints/jive-widget.ts", contents: "" }, { path: "widget/widget.md", contents: "" }],
       replacements: { widget: "kind" },
     });
     expect(files.map((file) => file.path)).toEqual([
-      "src/entrypoints/jive-<%= kind %>.ts.ejs",
-      "<%= kind %>/<%= kind %>.md.ejs",
+      "src/entrypoints/jive-{kind}.ts.ejs",
+      "{kind}/{kind}.md.ejs",
     ]);
+  });
+
+  test("writes no name GitHub's artifact upload or Windows refuses, whatever the sample's names hold", () => {
+    const { files } = encodeTemplate({
+      files: [{ path: "src/[slug]/{widget}-widget.ts", contents: "" }],
+      replacements: { widget: "kind" },
+    });
+    expect(files[0]?.path).toBe("src/[slug]/{{{kind}}-{kind}.ts.ejs");
+    expect(files[0]?.path).not.toMatch(/[<>:"|*?]/);
+  });
+
+  test("escapes a { in the sample's names, so rendering gives it back unchanged", () => {
+    const { files } = encodeTemplate({ files: [{ path: "{widget}/{{a}.ts", contents: "" }], replacements: { widget: "kind" } });
+    expect(files[0]?.path).toBe("{{{kind}}/{{{{a}.ts.ejs");
+    const rendered = Effect.runSync(renderTemplate({ files, inputs: { kind: "gizmo" } }));
+    expect(rendered.map((file) => file.path)).toEqual(["{gizmo}/{{a}.ts"]);
   });
 
   test("reports each literal found in no contents and no name", () => {
@@ -62,7 +78,7 @@ describe("encodeTemplate", () => {
 describe("renderTemplate", () => {
   test("renders names and contents with the inputs, escaping nothing", () => {
     const rendered = Effect.runSync(renderTemplate({
-      files: [{ path: "src/<%= kind %>.ts.ejs", contents: 'export const name = "<%= packageName %>";' }],
+      files: [{ path: "src/{kind}.ts.ejs", contents: 'export const name = "<%= packageName %>";' }],
       inputs: { kind: "agentic-workflow", packageName: "@scope/it's & <here>" },
     }));
     expect(rendered).toEqual([{ path: "src/agentic-workflow.ts", contents: `export const name = "@scope/it's & <here>";` }]);
@@ -70,9 +86,10 @@ describe("renderTemplate", () => {
 
   const failures: ReadonlyArray<{ name: string; path: string; inputs: Record<string, string>; message: string }> = [
     { name: "a file without .ejs", path: "a.ts", inputs: {}, message: "is not a template file" },
-    { name: "a missing input", path: "<%= kind %>.ts.ejs", inputs: {}, message: "Cannot render the name" },
-    { name: "a name that leaves the package", path: "<%= kind %>/a.ts.ejs", inputs: { kind: ".." }, message: "is not one file or folder name" },
-    { name: "a name holding a slash", path: "<%= kind %>.ts.ejs", inputs: { kind: "a/b" }, message: "is not one file or folder name" },
+    { name: "a missing input", path: "{kind}.ts.ejs", inputs: {}, message: "the input kind is not given" },
+    { name: "a { that starts no tag", path: "{-a.ts.ejs", inputs: {}, message: 'a "{" starts no {input} tag' },
+    { name: "a name that leaves the package", path: "{kind}/a.ts.ejs", inputs: { kind: ".." }, message: "is not one file or folder name" },
+    { name: "a name holding a slash", path: "{kind}.ts.ejs", inputs: { kind: "a/b" }, message: "is not one file or folder name" },
   ];
   test.each(failures)("fails for $name", ({ path, inputs, message }) => {
     const result = Effect.runSync(Effect.result(renderTemplate({ files: [{ path, contents: "" }], inputs })));

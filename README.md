@@ -21,16 +21,18 @@ a library that implements the six CI/CD hooks for one kind of package; what this
 **template step**:
 
 1. It reads every file under `src/template/`, skipping `node_modules`.
-2. It replaces each literal with `<%= input %>`, in every file's contents and in every file and folder name, one name
-   at a time. The longer of two literals that start at the same place wins, so `example` can never split
-   `example-library`, and a replaced tag is never searched again. A `<%` the sample itself contains becomes `<%%`, which
-   renders back as `<%`.
+2. It replaces each literal with `<%= input %>` in every file's contents, and with `{input}` in every file and folder
+   name, one name at a time. The longer of two literals that start at the same place wins, so `example` can never split
+   `example-library`, and a replaced tag is never searched again. A `<%` the sample's contents hold becomes `<%%`, and a
+   `{` its names hold becomes `{{`; each renders back unchanged. Names don't use EJS tags because GitHub's artifact
+   upload refuses a file name holding `<`, `>` or `:`, and Windows can't unpack one.
 3. It fails the build, writing nothing, when a literal appears nowhere, neither in a file nor in a name.
 4. It writes each file as `dist/base/template/<path>.ejs`, adds `template` to `dist/base/package.json`'s `files`, and
    records the replacements there as `jive.abstract`, which is where `jive create` reads them. The copies of the sample
    that jive-abstract-library's build put in `dist/base/src/template` and `dist/base/dist/template` are removed.
 
-`jive create` renders each file with EJS, escaping nothing because the output is source code, and writes the package
+`jive create` renders each file's contents with EJS, escaping nothing because the output is source code, fills in each
+name's `{input}` tags, and writes the package
 at `packages/<its package.json name>` in the workspace.
 
 The other five hooks are jive-abstract-library's, run the same way. `jive-abstraction build-template` runs only the

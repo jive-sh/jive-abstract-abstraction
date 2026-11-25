@@ -1,14 +1,18 @@
 import { Effect } from "effect";
 import ejs from "ejs";
-import { TEMPLATE_FILE_SUFFIX } from "./manifest";
+import { INPUT_NAME_PATTERN, TEMPLATE_FILE_SUFFIX } from "./manifest";
 
 /**
  * The template format, both directions: the build turns a sample package into `.ejs` files, and `jive create`
  * renders them back with the person's inputs. One module owns both, so what the build escapes is exactly what the
  * renderer unescapes.
  *
- * In a built template, each replaced literal is `<%= input %>`, and any `<%` the sample itself contains is `<%%`,
- * which EJS renders as `<%`. Rendering escapes nothing, since the output is source code, not HTML.
+ * In a built template's file contents, each replaced literal is `<%= input %>`, and any `<%` the sample itself
+ * contains is `<%%`, which EJS renders as `<%`. Rendering escapes nothing, since the output is source code, not HTML.
+ *
+ * File and folder names can't hold EJS tags: GitHub's artifact upload refuses a file name containing `<`, `>`, `:`,
+ * `"`, `|`, `*` or `?`, and Windows can't create one, so an npm package holding such a name fails to unpack there.
+ * In a name, each replaced literal is `{input}` instead, and any `{` the sample's name itself contains is `{{`.
  */
 
 /** One file of a package or of a template, by its path relative to the package root with `/` separators. */
@@ -24,11 +28,16 @@ export interface EncodedTemplate {
 }
 
 const EJS_OPENING_DELIMITER = "<%";
+const NAME_TAG_OPENING = "{";
+
+/** In a built name: an escaped `{`, an input's tag (its name captured), or a `{` that starts neither. */
+const NAME_TOKEN = new RegExp(`\\{\\{|\\{(${INPUT_NAME_PATTERN})\\}|\\{`, "g");
 
 /**
- * Replaces each literal with its input's EJS tag in every file's contents and in every file and folder name, and
- * names every file `<name>.ejs`. One pass over the text, trying longer literals first at each position, so a literal
- * inside a longer one never splits it, and the tag a literal becomes is never searched for another.
+ * Replaces each literal with its input's tag in every file's contents (`<%= input %>`) and in every file and folder
+ * name (`{input}`), and names every file `<name>.ejs`. One pass over the text, trying longer literals first at each
+ * position, so a literal inside a longer one never splits it, and the tag a literal becomes is never searched for
+ * another.
  */
 export function encodeTemplate(input: {
   readonly files: ReadonlyArray<TemplateFile>;
@@ -36,18 +45,21 @@ export function encodeTemplate(input: {
 }): EncodedTemplate {
   const literals = Object.keys(input.replacements).sort((a, b) => b.length - a.length || a.localeCompare(b));
   const occurrences = new Map(literals.map((literal) => [literal, 0]));
-  const pattern = new RegExp([...literals, EJS_OPENING_DELIMITER].map(escapeRegExp).join("|"), "g");
-
-  const encode = (text: string): string => text.replace(pattern, (match) => {
-    const inputName = input.replacements[match];
-    if (inputName === undefined) return `${EJS_OPENING_DELIMITER}%`;
-    occurrences.set(match, (occurrences.get(match) ?? 0) + 1);
-    return `<%= ${inputName} %>`;
-  });
+  const encoder = (opening: string, escaped: string, tag: (inputName: string) => string) => {
+    const pattern = new RegExp([...literals, opening].map(escapeRegExp).join("|"), "g");
+    return (text: string): string => text.replace(pattern, (match) => {
+      const inputName = input.replacements[match];
+      if (inputName === undefined) return escaped;
+      occurrences.set(match, (occurrences.get(match) ?? 0) + 1);
+      return tag(inputName);
+    });
+  };
+  const encodeContents = encoder(EJS_OPENING_DELIMITER, `${EJS_OPENING_DELIMITER}%`, (inputName) => `<%= ${inputName} %>`);
+  const encodeName = encoder(NAME_TAG_OPENING, `${NAME_TAG_OPENING}${NAME_TAG_OPENING}`, (inputName) => `{${inputName}}`);
 
   const files = input.files.map((file) => ({
-    path: `${file.path.split("/").map(encode).join("/")}${TEMPLATE_FILE_SUFFIX}`,
-    contents: encode(file.contents),
+    path: `${file.path.split("/").map(encodeName).join("/")}${TEMPLATE_FILE_SUFFIX}`,
+    contents: encodeContents(file.contents),
   }));
   return { files, literalsNeverFound: literals.filter((literal) => occurrences.get(literal) === 0) };
 }
@@ -67,7 +79,7 @@ export function renderTemplate(input: {
     }
     const segments: Array<string> = [];
     for (const segment of file.path.slice(0, -TEMPLATE_FILE_SUFFIX.length).split("/")) {
-      const rendered = yield* render({ text: segment, inputs: input.inputs, location: `the name ${file.path}` });
+      const rendered = yield* renderName({ name: segment, inputs: input.inputs, location: `the name ${file.path}` });
       if (rendered === "" || rendered === "." || rendered === ".." || rendered.includes("/") || rendered.includes("\\")) {
         return yield* Effect.fail(`${file.path} renders to the name ${JSON.stringify(rendered)}, which is not one file or folder name`);
       }
@@ -78,6 +90,29 @@ export function renderTemplate(input: {
       contents: yield* render({ text: file.contents, inputs: input.inputs, location: file.path }),
     };
   }));
+}
+
+/** Renders one built file or folder name: `{{` becomes `{`, and `{input}` becomes that input's value. */
+function renderName(input: {
+  readonly name: string;
+  readonly inputs: { readonly [inputName: string]: string };
+  readonly location: string;
+}): Effect.Effect<string, string> {
+  const problems: Array<string> = [];
+  const rendered = input.name.replace(NAME_TOKEN, (match: string, inputName: string | undefined) => {
+    if (match === `${NAME_TAG_OPENING}${NAME_TAG_OPENING}`) return NAME_TAG_OPENING;
+    if (inputName === undefined) {
+      problems.push(`a "{" starts no {input} tag (a "{" in the name itself is written "{{")`);
+      return match;
+    }
+    const value = input.inputs[inputName];
+    if (value === undefined) {
+      problems.push(`the input ${inputName} is not given`);
+      return match;
+    }
+    return value;
+  });
+  return problems.length === 0 ? Effect.succeed(rendered) : Effect.fail(`Cannot render ${input.location}: ${problems.join("; ")}`);
 }
 
 function render(input: {
