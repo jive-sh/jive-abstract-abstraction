@@ -31,6 +31,10 @@ a library that implements the six CI/CD hooks for one kind of package; what this
    records the replacements there as `jive.abstract`, which is where `jive create` reads them. The copies of the sample
    that jive-abstract-library's build put in `dist/base/src/template` and `dist/base/dist/template` are removed.
 
+Because the template step writes `template`, `jive.library.copy` can't name it: the build fails, before
+jive-abstract-library's build runs, on a `copy` entry at or under `template`, and the generated `package.schema.json`
+leaves it out of the paths `copy` offers.
+
 `jive create` renders each file's contents with EJS, escaping nothing because the output is source code, fills in each
 name's `{input}` tags, and writes the package
 at `packages/<its package.json name>` in the workspace.

@@ -3,7 +3,7 @@
   "license": "MIT",
   "name": "jive-abstract-abstraction",
   "description": "The Jive abstract that abstracts extend: its build is jive-abstract-library's plus the template step, which turns an abstract's src/template sample package into the .ejs template `jive create` renders. CLI: jive-abstraction.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "peerDependencies": {
     "effect": "^4.0.0",
@@ -13,7 +13,7 @@
     "@effect/platform-bun": "^4.1.4",
     "@types/ejs": "^3.1.5",
     "ejs": "^7.0.2",
-    "jive-abstract-library": "0.14.5"
+    "jive-abstract-library": "0.16.0"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",
@@ -53,6 +53,9 @@
     },
     "library": {
       "daemons": [],
+      "copy": [
+        "README.md"
+      ],
       "provisionWithJive": null
     },
     "abstract": {

@@ -1,7 +1,7 @@
 import { Effect, Layer, Option, pipe } from "effect";
 import { BunFileSystem } from "@effect/platform-bun";
-import { loadPackageJson, makeCicdCommandFactory, OSPlatform, OSPlatformImpl, packageRootDir } from "jive-abstract-library";
-import { PackageJsonSchema } from "../public/manifest";
+import { loadPackageJson, makeCicdCommandFactory, OSPlatform, OSPlatformImpl, packageRootDir, resolveCopyEntries } from "jive-abstract-library";
+import { PackageJsonSchema, TEMPLATE_STEP_OUTPUTS } from "../public/manifest";
 import { buildTemplate } from "../public/template-build";
 
 /**
@@ -41,6 +41,15 @@ function* loadManifest() {
   return yield* loadPackageJson(PackageJsonSchema);
 }
 
+/**
+ * Fails when `jive.library.copy` names a path the template step writes. jive-abstract-library's build, run as its CLI,
+ * checks the rest of copy against its own reserved paths but cannot know this abstract's.
+ */
+function* checkCopy() {
+  const { jive } = yield* loadManifest();
+  yield* resolveCopyEntries({ rootDir: yield* packageRootDir, copy: jive.library.copy, extraReservedPaths: TEMPLATE_STEP_OUTPUTS });
+}
+
 function* templateStep() {
   const { jive } = yield* loadManifest();
   yield* buildTemplate({ rootDir: yield* packageRootDir, abstract: jive.abstract });
@@ -72,7 +81,7 @@ export const cicd = {
     "build",
     "build the abstract with jive-abstract-library, then write its template from src/template/ into dist/base/template/",
     function* () {
-      yield* loadManifest();
+      yield* checkCopy();
       yield* runLibraryHook("build");
       yield* templateStep();
     },

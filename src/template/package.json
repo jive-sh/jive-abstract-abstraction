@@ -11,12 +11,12 @@
   },
   "dependencies": {
     "@effect/platform-bun": "^4.1.4",
-    "jive-abstract-library": "0.14.5"
+    "jive-abstract-library": "0.16.0"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",
     "effect": "^4.1.4",
-    "jive-abstract-abstraction": "0.1.0",
+    "jive-abstract-abstraction": "0.2.0",
     "typescript": "^5.9.3"
   },
   "scripts": {
@@ -52,6 +52,9 @@
     },
     "library": {
       "daemons": [],
+      "copy": [
+        "README.md"
+      ],
       "provisionWithJive": null
     },
     "abstract": {

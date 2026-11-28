@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { discoverDaemonNames, LibrarySchema, makeJivePackageJsonSchema, makeLibrarySchema, packageRootDir, type PackageJsonSchemaGenerator } from "jive-abstract-library";
+import { discoverLibrarySchema, LibrarySchema, makeJivePackageJsonSchema, packageRootDir, type PackageJsonSchemaGenerator } from "jive-abstract-library";
 
 /**
  * The shape of an abstract's package.json: everything a library built by jive-abstract-library has, plus the
@@ -50,10 +50,16 @@ export type AbstractConfig = Schema.Schema.Type<typeof AbstractSchema>;
 export const PackageJsonSchema = makeJivePackageJsonSchema({ library: LibrarySchema, abstract: AbstractSchema });
 export type PackageJson = Schema.Schema.Type<typeof PackageJsonSchema>;
 
-/** The schema the dev server writes to package.schema.json: this one, with `jive.library.daemons` pinned to the files. */
+/** What the template step writes into the published package, which `jive.library.copy` therefore cannot name. */
+export const TEMPLATE_STEP_OUTPUTS = [TEMPLATE_DIRECTORY] as const;
+
+/**
+ * The schema the dev server writes to package.schema.json: this one, with `jive.library.daemons` pinned to the files and
+ * `jive.library.copy` offering only paths neither jive-abstract-library's build nor the template step writes.
+ */
 export const genPackageJsonSchema: PackageJsonSchemaGenerator = Effect.gen(function* () {
   const rootDir = yield* packageRootDir;
-  const library = makeLibrarySchema(yield* discoverDaemonNames(rootDir));
+  const library = yield* discoverLibrarySchema({ rootDir, extraReservedPaths: TEMPLATE_STEP_OUTPUTS });
   return makeJivePackageJsonSchema({ library, abstract: AbstractSchema });
 });
 
